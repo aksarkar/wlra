@@ -11,7 +11,7 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'scipy',
-        'sklearn',
+        'scikit-learn',
     ],
     packages=setuptools.find_packages(),
 )
