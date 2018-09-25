@@ -1,0 +1,40 @@
+#+TITLE: Weighted low rank approximation
+
+* Introduction
+
+  We are interested in solving the /weighted low-rank approximation problem/:
+
+  \[ \min_{\mathbf{Z}} \sum_{i,j} w_{ij} \left(x_{ij} - z_{ij} \right)^2 \]
+
+  where \(n \times p\) target matrix \(\mathbf{X}\) and \(n \times p\) weight
+  matrix \(\mathbf{W}\) are given, and \(\mathbf{Z}\) is constrained to some
+  rank.
+
+  Solving WLRA allows us to solve two main problems:
+
+  1. *Learn low rank structure in non-Gaussian data.* Using Taylor expansion of
+     non-Gaussian likelihoods, we can rewrite the MLE of factor models as the
+     solution to WLRA. The key idea is that the Taylor expansion is performed
+     around a different value for each observation, naturally leading to an
+     iterative approach.
+
+  2. *Handle truly missing data.* By setting weights to zero, we can code
+     missing data. This approach works even in settings where observations can
+     also take the value zero, such as single cell RNA sequencing data.
+
+* Installation
+
+  #+BEGIN_SRC sh
+    pip install git+https://www.github.com/aksarkar/wlra.git#egg=wlra
+  #+END_SRC
+
+* Example
+
+  #+BEGIN_SRC ipython
+    np.random.seed(0)
+    l = np.random.normal(size=(n, 3))
+    f = np.random.normal(size=(3, p))
+    eta = l.dot(f)
+    x = np.random.poisson(lam=np.exp(eta))
+    res = pois_lra(x, rank=3)
+  #+END_SRC
