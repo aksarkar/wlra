@@ -8,6 +8,21 @@ import numpy as np
 import scipy.special as sp
 import sklearn.decomposition as skd
 
+def lra(x, rank):
+  """Return the unweighted low rank approximation of x
+
+  The solution is given by truncated SVD. This implementation automatically
+  chooses a randomized algorithm if x is big enough.
+
+  """
+  u, d, vt = skd.PCA(n_components=rank)._fit(x)
+  if d.shape[0] > rank:
+    # It was faster to perform full SVD, so we need to truncate ourselves
+    u = u[:,:rank]
+    d = d[:rank]
+    vt = vt[:rank]
+  return np.einsum('ij,j,jk->ik', u, d, vt)
+
 def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   """Return the weighted low rank approximation of x
 
@@ -33,15 +48,10 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   # Srebro and Jaakkola suggest the best strategy is to initialize
   # from zero, but go from a full rank down to a rank k approximation in
   # the first iterations
-  #
-  # Here, we take the simpler strategy of initializing to zero, which could end
-  # in a local optimum and underfit the data.
   z = np.zeros(x.shape)
-  pca = skd.PCA(n_components=rank)
   obj = np.inf
   for i in range(max_iters):
-    u, d, vt = pca._fit(w * x + (1 - w) * z)
-    z1 = np.einsum('ij,j,jk->ik', u, d, vt)
+    z1 = lra(w * x + (1 - w) * z, rank)
     update = (w * np.square(x - z1)).mean()
     if verbose:
       print(f'wsvd [{i}] = {update}')
@@ -51,9 +61,6 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
       return z1
     else:
       z = z1
-      obj = update
-  raise RuntimeError('failed to converge')
-
       obj = update
   raise RuntimeError('failed to converge')
 
