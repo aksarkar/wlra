@@ -101,13 +101,24 @@ def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=Fal
   """
   n, p = x.shape
   obj = -np.inf
-  eta = np.ones(x.shape) * np.log(x.mean(axis=1, keepdims=True))
+  lam = x.mean(axis=0, keepdims=True)
+  if np.ma.is_masked(x):
+    # This only removes the mask
+    lam = lam.filled(0)
+  eta = np.ones(x.shape) * np.log(lam)
   for i in range(max_outer_iters):
     lam = np.exp(eta)
     w = lam / 2
-    # TODO: WLRA requires weights 0 <= w <= 1
+    # Important: WLRA requires weights 0 <= w <= 1
     w /= w.max()
     target = eta - x / lam + 1
+    if np.ma.is_masked(x):
+      # Mark missing data with weight 0
+      w *= (~x.mask).astype(int)
+      # Now we can go ahead and fill in the missing values with something
+      # computationally convenient, because the WLRA EM update will ignore the
+      # value for weight zero.
+      target = target.filled(0)
     eta1 = wlra(target, w, rank, max_iters=max_iters, atol=atol, verbose=verbose)
     update = pois_llik(x, eta1).mean()
     if verbose:

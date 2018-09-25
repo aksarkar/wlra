@@ -29,3 +29,11 @@ def test_pois_lra_shape():
   x = np.ones((100, 200))
   res = wlra.pois_lra(x, 1, verbose=True)
   assert res.shape == (100, 200)
+
+def test_pois_lra_masked_array():
+  np.random.seed(0)
+  x = np.random.poisson(lam=np.exp(np.random.normal(size=(100, 200))))
+  x = np.ma.masked_equal(x, 1)
+  res = wlra.pois_lra(x, 1)
+  assert res.shape == (100, 200)
+  assert not np.ma.is_masked(res)
