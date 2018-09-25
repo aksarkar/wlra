@@ -1,6 +1,5 @@
-#+TITLE: Weighted low rank approximation
-
-* Introduction
+* Weighted low rank approximation
+** Introduction
 
   We are interested in solving the /weighted low-rank approximation problem/:
 
@@ -22,13 +21,13 @@
      missing data. This approach works even in settings where observations can
      also take the value zero, such as single cell RNA sequencing data.
 
-* Installation
+** Installation
 
   #+BEGIN_SRC sh
     pip install git+https://www.github.com/aksarkar/wlra.git#egg=wlra
   #+END_SRC
 
-* Example
+** Example
 
   #+BEGIN_SRC ipython
     np.random.seed(0)
