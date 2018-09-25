@@ -26,6 +26,6 @@ def test_wlra_rank_2():
   assert np.isclose(res, res0).all()
 
 def test_pois_lra_shape():
-  x = np.zeros((100, 200))
+  x = np.ones((100, 200))
   res = wlra.pois_lra(x, 1, verbose=True)
   assert res.shape == (100, 200)
