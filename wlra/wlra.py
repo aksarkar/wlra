@@ -6,6 +6,7 @@ Author: Abhishek Sarkar <aksarkar@alum.mit.edu>
 
 import numpy as np
 import scipy.special as sp
+import scipy.stats as st
 import sklearn.decomposition as skd
 
 def lra(x, rank):
@@ -62,6 +63,31 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
     else:
       z = z1
       obj = update
+  raise RuntimeError('failed to converge')
+
+def hsvd(x, s, rank, prior_prec=1, max_iters=1000, atol=1e-3, verbose=False):
+  """Return the low rank approximation of x, assuming heteroscedastic errors
+
+  """
+  n, p = x.shape
+  udv = np.zeros((n, p))
+  z = np.zeros((n, p))
+  obj = -np.inf
+  for i in range(max_iters):
+    udv1 = lra(x, rank)
+    r = x - udv1
+    posterior_prec = prior_prec + 1 / s ** 2
+    z = r * prior_prec / posterior_prec
+    update = st.norm(scale=np.sqrt(s ** 2 + 1 / prior_prec)).logpdf(r).mean()
+    if verbose:
+      print(f'hsvd [{i}] = {update}')
+    if update < obj:
+      return udv
+    if np.isclose(update, obj):
+      return udv1
+    else:
+      obj = update
+      udv = udv1
   raise RuntimeError('failed to converge')
 
 def pois_llik(y, eta):
