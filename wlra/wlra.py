@@ -1,5 +1,10 @@
 """Weighted low rank approximation
 
+Here, we implement the EM algorithm of [SJ03]_, and use it as the basis for
+finding low rank approximations maximizing non-Gaussian likelihoods.
+
+.. [SJ03] `Srebro and Jaakkola 2003 <https://www.aaai.org/Papers/ICML/2003/ICML03-094.pdf>`_
+
 Author: Abhishek Sarkar <aksarkar@alum.mit.edu>
 
 """
@@ -15,6 +20,11 @@ def lra(x, rank):
   The solution is given by truncated SVD. This implementation automatically
   chooses a randomized algorithm if x is big enough.
 
+  :param x: ndarray (n, p)
+  :param rank: rank of the approximation
+
+  :returns low_rank: ndarray (n, p)
+
   """
   u, d, vt = skd.PCA(n_components=rank)._fit(x)
   if d.shape[0] > rank:
@@ -27,28 +37,33 @@ def lra(x, rank):
 def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   """Return the weighted low rank approximation of x
 
-  Minimize the weighted Frobenius norm between x and the approximation z,
-  constraining z to the specificed rank, using EM (Srebro and Jaakola 2003)
+  Minimize the weighted Frobenius norm between x and the approximation z using
+  EM [SJ03]_.
 
-  x - input data (n, p)
-  w - input weights (n, p)
-  rank - rank of the approximation (non-negative)
-  max_iters - maximum number of EM iterations. Raises RuntimeError on convergence failure
-  atol - minimum absolute difference in objective function for convergence
-  verbose - print objective function updates
+  Raises RuntimeError on convergence failure.
 
-  Returns:
+  :param x: input data (n, p)
+  :param w: input weights (n, p)
+  :param rank: - rank of the approximation (non-negative)
+  :param max_iters: - maximum number of EM iterations
+  :param atol: - minimum absolute difference in objective function for convergence
+  :param verbose: - print objective function updates
 
-  low_rank - ndarray (n, p)
+  :returns low_rank: - ndarray (n, p)
 
   """
   n, p = x.shape
+  # Important: WLRA requires weights 0 <= w <= 1
+  w /= w.max()
   # Important: the procedure is deterministic, so initialization
   # matters.
   #
   # Srebro and Jaakkola suggest the best strategy is to initialize
   # from zero, but go from a full rank down to a rank k approximation in
   # the first iterations
+  #
+  # For now, take the simpler strategy of just initializing to zero. Srebro and
+  # Jaakkola suggest this can underfit.
   z = np.zeros(x.shape)
   obj = np.inf
   for i in range(max_iters):
@@ -71,12 +86,10 @@ def pois_llik(y, eta):
   This implementation supports broadcasting eta (i.e., sharing parameters
   across observations).
 
-  y - scalar or ndarray
-  eta - scalar or ndarray
+  :param y: scalar or ndarray
+  :param eta: scalar or ndarray
 
-  Returns:
-
-  llik - ndarray (y.shape)
+  :returns llik: ndarray (y.shape)
 
   """
   return y * eta - np.exp(eta) - sp.gammaln(y + 1)
@@ -89,15 +102,13 @@ def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=Fal
   Maximize the log likelihood by using Taylor approximation to rewrite the
   problem as WLRA.
 
-  x - input data (n, p)
-  rank - rank of the approximation
-  max_outer_iters - maximum number of calls to WLRA
-  max_iters - maximum number of EM iterations in WLRA
-  verbose - print objective function updates
-  
-  Returns:
+  :param x: input data (n, p)
+  :param rank: rank of the approximation
+  :param max_outer_iters: maximum number of calls to WLRA
+  :param max_iters: maximum number of EM iterations in WLRA
+  :param verbose: print objective function updates
 
-  eta - low rank approximation (n, p)
+  :returns eta: low rank approximation (n, p)
 
   """
   n, p = x.shape
@@ -110,8 +121,6 @@ def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=Fal
   for i in range(max_outer_iters):
     lam = np.exp(eta)
     w = lam / 2
-    # Important: WLRA requires weights 0 <= w <= 1
-    w /= w.max()
     target = eta - x / lam + 1
     if np.ma.is_masked(x):
       # Mark missing data with weight 0
