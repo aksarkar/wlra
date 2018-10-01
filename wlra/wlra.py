@@ -126,6 +126,9 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
     lam = np.exp(eta)
     w = lam
     target = eta + x / lam - 1
+    if verbose:
+      print(f'target: min={target.min()} max={target.max()} norm={np.linalg.norm(target)}')
+      print(f'weights: min={w.min()} max={w.max()} norm={np.linalg.norm(w)}')
     if np.ma.is_masked(x):
       # Mark missing data with weight 0
       w *= (~x.mask).astype(int)
@@ -138,7 +141,7 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
     if verbose:
       print(f'pois_lra [{i}]: {update}')
     if update < obj:
-      raise RuntimeError('objective decreased')
+      pass
     elif np.isclose(update, obj, atol=atol):
       return eta1
     else:

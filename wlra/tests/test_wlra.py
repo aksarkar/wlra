@@ -43,8 +43,12 @@ def test_wlra_rank_2():
 
 def test_pois_lra_shape():
   x = np.ones((100, 200))
-  res = wlra.pois_lra(x, 1, verbose=True)
+  res = wlra.pois_lra(x, 1)
   assert res.shape == (100, 200)
+
+def test_pois_lra_assume_rank_1():
+  x = np.random.poisson(lam=np.exp(np.random.normal(size=(100, 200))))
+  res = wlra.pois_lra(x, 1)
 
 def test_pois_lra_masked_array():
   np.random.seed(0)
