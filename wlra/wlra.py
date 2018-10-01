@@ -54,6 +54,7 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   """
   n, p = x.shape
   # Important: WLRA requires weights 0 <= w <= 1
+  w = np.array(w, dtype='float')
   w /= w.max()
   # Important: the procedure is deterministic, so initialization
   # matters.
@@ -65,14 +66,14 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   # For now, take the simpler strategy of just initializing to zero. Srebro and
   # Jaakkola suggest this can underfit.
   z = np.zeros(x.shape)
-  obj = np.inf
+  obj = (w * np.square(x)).mean()
   for i in range(max_iters):
     z1 = lra(w * x + (1 - w) * z, rank)
     update = (w * np.square(x - z1)).mean()
     if verbose:
       print(f'wsvd [{i}] = {update}')
     if update > obj:
-      return z
+      raise RuntimeError('objective increased')
     elif np.isclose(update, obj, atol=atol):
       return z1
     else:
@@ -94,13 +95,15 @@ def pois_llik(y, eta):
   """
   return y * eta - np.exp(eta) - sp.gammaln(y + 1)
 
-def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=False):
+def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=False):
   """Return the low rank approximation of x assuming Poisson data
 
   Assume x_ij ~ Poisson(exp(eta_ij)), eta_ij = L_ik F_kj
 
   Maximize the log likelihood by using Taylor approximation to rewrite the
   problem as WLRA.
+
+  This implementation supports early stopping by setting max_outer_iters.
 
   :param x: input data (n, p)
   :param rank: rank of the approximation
@@ -112,16 +115,17 @@ def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=Fal
 
   """
   n, p = x.shape
-  obj = -np.inf
-  lam = x.mean(axis=0, keepdims=True)
-  if np.ma.is_masked(x):
-    # This only removes the mask
-    lam = lam.filled(0)
-  eta = np.ones(x.shape) * np.log(lam)
+  if init is not None:
+    eta = init
+  else:
+    eta = np.ones(x.shape) * x.mean()
+  obj = pois_llik(x, eta).mean()
+  if verbose:
+    print(f'pois_lra: {obj}')
   for i in range(max_outer_iters):
     lam = np.exp(eta)
-    w = lam / 2
-    target = eta - x / lam + 1
+    w = lam
+    target = eta + x / lam - 1
     if np.ma.is_masked(x):
       # Mark missing data with weight 0
       w *= (~x.mask).astype(int)
@@ -134,10 +138,10 @@ def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=Fal
     if verbose:
       print(f'pois_lra [{i}]: {update}')
     if update < obj:
-      return eta
+      raise RuntimeError('objective decreased')
     elif np.isclose(update, obj, atol=atol):
       return eta1
     else:
       eta = eta1
       obj = update
-  raise RuntimeError('failed to converge')
+  return eta
