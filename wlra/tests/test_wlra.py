@@ -57,3 +57,13 @@ def test_pois_lra_masked_array():
   res = wlra.pois_lra(x, 1)
   assert res.shape == (100, 200)
   assert not np.ma.is_masked(res)
+
+def test_pois_lra_mask():
+  np.random.seed(0)
+  l = np.random.normal(size=(200, 3))
+  f = np.random.normal(size=(3, 300))
+  eta = l.dot(f)
+  x = np.random.poisson(lam=np.exp(eta))
+  mask = np.random.uniform(size=x.shape) < 0.25
+  x = np.ma.masked_array(x, mask=mask)
+  res = wlra.pois_lra(x, 3)

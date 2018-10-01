@@ -67,11 +67,13 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
   # Jaakkola suggest this can underfit.
   z = np.zeros(x.shape)
   obj = (w * np.square(x)).mean()
+  if verbose:
+    print(f'wsvd [0] = {obj}')
   for i in range(max_iters):
     z1 = lra(w * x + (1 - w) * z, rank)
     update = (w * np.square(x - z1)).mean()
     if verbose:
-      print(f'wsvd [{i}] = {update}')
+      print(f'wsvd [{i + 1}] = {update}')
     if update > obj:
       raise RuntimeError('objective increased')
     elif np.isclose(update, obj, atol=atol):
@@ -80,6 +82,11 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
       z = z1
       obj = update
   raise RuntimeError('failed to converge')
+
+def safe_exp(x):
+  """Numerically safe exp"""
+  x = np.array(x)
+  return np.where(x > 100, x, np.exp(x))
 
 def pois_llik(y, eta):
   """Return ln p(y | eta) assuming y ~ Poisson(exp(eta))
@@ -93,7 +100,7 @@ def pois_llik(y, eta):
   :returns llik: ndarray (y.shape)
 
   """
-  return y * eta - np.exp(eta) - sp.gammaln(y + 1)
+  return y * eta - safe_exp(eta) - sp.gammaln(y + 1)
 
 def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=False):
   """Return the low rank approximation of x assuming Poisson data
@@ -118,20 +125,17 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
   if init is not None:
     eta = init
   else:
-    eta = np.ones(x.shape) * x.mean()
+    eta = np.ones(x.shape) * np.log(x.mean())
   obj = pois_llik(x, eta).mean()
   if verbose:
-    print(f'pois_lra: {obj}')
+    print(f'pois_lra [0]: {obj}')
   for i in range(max_outer_iters):
-    lam = np.exp(eta)
+    lam = safe_exp(eta)
     w = lam
     target = eta + x / lam - 1
-    if verbose:
-      print(f'target: min={target.min()} max={target.max()} norm={np.linalg.norm(target)}')
-      print(f'weights: min={w.min()} max={w.max()} norm={np.linalg.norm(w)}')
     if np.ma.is_masked(x):
       # Mark missing data with weight 0
-      w *= (~x.mask).astype(int)
+      w *= (~x.mask).astype(float)
       # Now we can go ahead and fill in the missing values with something
       # computationally convenient, because the WLRA EM update will ignore the
       # value for weight zero.
@@ -139,10 +143,8 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
     eta1 = wlra(target, w, rank, max_iters=max_iters, atol=atol, verbose=verbose)
     update = pois_llik(x, eta1).mean()
     if verbose:
-      print(f'pois_lra [{i}]: {update}')
-    if update < obj:
-      pass
-    elif np.isclose(update, obj, atol=atol):
+      print(f'pois_lra [{i + 1}]: {update}')
+    if np.isclose(update, obj, atol=atol):
       return eta1
     else:
       eta = eta1
