@@ -1,20 +1,50 @@
 
 setup.py,0
 
-wlra/tests/test_wlra.py,275
+wlra/tests/test_wlra.py,559
 import numpy as npnp1,0
 import sklearn.decomposition as skdskd3,33
-def test_wlra_shape():test_wlra_shape6,82
-def test_wlra_unit_weight():test_wlra_unit_weight12,224
-def test_wlra_rank_2():test_wlra_rank_220,478
-def test_pois_lra_shape():test_pois_lra_shape28,727
+def test_lra_shape():test_lra_shape9,165
+def test_lra_value():test_lra_value14,271
+def test_wlra_shape():test_wlra_shape24,699
+def test_wlra_unit_weight():test_wlra_unit_weight30,841
+def test_wlra_rank_2():test_wlra_rank_237,1026
+def test_pois_lra_shape():test_pois_lra_shape44,1206
+def test_pois_lra_assume_rank_1():test_pois_lra_assume_rank_149,1321
+def test_pois_lra_masked_array():test_pois_lra_masked_array53,1456
+def test_pois_lra_mask():test_pois_lra_mask61,1708
 
-wlra/wlra.py,303
-import numpy as npnp7,90
-import scipy.special as spsp8,109
-import sklearn.decomposition as skdskd9,136
-def wlra(x, w, rank, max_iters=10, verbose=False):wlra11,173
-def pois_llik(y, eta):pois_llik46,1253
-def pois_lra(x, rank, max_outer_iters=100, max_iters=10, verbose=False):pois_lra62,1582
+wlra/tests/test_nmf.py,314
+import numpy as npnp1,0
+import sklearn.decomposition as skdskd3,33
+def simulate():simulate8,112
+def test_nmf_shape(simulate):test_nmf_shape15,295
+def test_nmf_rank(simulate):test_nmf_rank20,389
+def test_nmf_objective(simulate):test_nmf_objective26,524
+def test_nmf_mask(simulate):test_nmf_mask33,715
+
+wlra/wlra.py,432
+import numpy as npnp12,330
+import scipy.special as spsp13,349
+import scipy.stats as stst14,376
+import sklearn.decomposition as skdskd15,401
+def lra(x, rank):lra17,438
+def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):wlra37,1000
+def safe_exp(x):safe_exp86,2591
+def pois_llik(y, eta):pois_llik91,2697
+def pois_lra(x, rank, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=False):pois_lra105,3036
+
+wlra/nmf.py,95
+import numpy as npnp1,0
+def nmf(x, rank, max_iters=1000, atol=1e-4, verbose=False):nmf3,20
 
 wlra/__init__.py,0
+
+wlra/pois.py,322
+import numpy as npnp1,0
+class PoissonFA(torch.nn.Module):PoissonFA4,33
+  def __init__(self, n_samples, n_features, n_components):__init__6,128
+  def forward(self, x):forward19,629
+  def fit(self, x, max_epochs=1000, atol=1e-3, verbose=False, **kwargs):fit24,852
+  def l(self):l53,1723
+  def f(self):f57,1786

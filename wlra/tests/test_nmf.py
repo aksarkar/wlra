@@ -37,3 +37,8 @@ def test_nmf_mask(simulate):
   res = nmf(y, 1)
   res0 = nmf(x, 1)
   assert (res != res0).any()
+
+@pytest.mark.xfail
+def test_nmf_not_frob(simulate):
+  x = simulate
+  res = nmf(x, 1, frob=False)

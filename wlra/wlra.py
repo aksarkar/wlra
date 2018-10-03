@@ -13,6 +13,8 @@ import numpy as np
 import scipy.special as sp
 import scipy.stats as st
 import sklearn.decomposition as skd
+from .nmf import nmf
+from .safe import *
 
 def lra(x, rank):
   """Return the unweighted low rank approximation of x
@@ -83,11 +85,6 @@ def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
       obj = update
   raise RuntimeError('failed to converge')
 
-def safe_exp(x):
-  """Numerically safe exp"""
-  x = np.array(x)
-  return np.where(x > 100, x, np.exp(x))
-
 def pois_llik(y, eta):
   """Return ln p(y | eta) assuming y ~ Poisson(exp(eta))
 
@@ -102,15 +99,13 @@ def pois_llik(y, eta):
   """
   return y * eta - safe_exp(eta) - sp.gammaln(y + 1)
 
-def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, verbose=False):
+def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=False):
   """Return the low rank approximation of x assuming Poisson data
 
   Assume x_ij ~ Poisson(exp(eta_ij)), eta_ij = L_ik F_kj
 
   Maximize the log likelihood by using Taylor approximation to rewrite the
   problem as WLRA.
-
-  This implementation supports early stopping by setting max_outer_iters.
 
   :param x: input data (n, p)
   :param rank: rank of the approximation
@@ -122,10 +117,7 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
 
   """
   n, p = x.shape
-  if init is not None:
-    eta = init
-  else:
-    eta = np.ones(x.shape) * np.log(x.mean())
+  eta = safe_log(nmf(x, rank))
   obj = pois_llik(x, eta).mean()
   if verbose:
     print(f'pois_lra [0]: {obj}')
@@ -149,4 +141,4 @@ def pois_lra(x, rank, init=None, max_outer_iters=10, max_iters=1000, atol=1e-3, 
     else:
       eta = eta1
       obj = update
-  return eta
+  raise RuntimeError('failed to converge')

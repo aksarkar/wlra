@@ -1,10 +1,11 @@
 import numpy as np
+import os
+import pickle
 import pytest
-import sklearn.decomposition as skd
 import wlra
 
 # This is needed to get functions not publicly exported
-from wlra.wlra import lra
+from wlra.wlra import lra, nmf
 
 def test_lra_shape():
   x = np.zeros((100, 200))
@@ -66,4 +67,19 @@ def test_pois_lra_mask():
   x = np.random.poisson(lam=np.exp(eta))
   mask = np.random.uniform(size=x.shape) < 0.25
   x = np.ma.masked_array(x, mask=mask)
+  res = wlra.pois_lra(x, 3)
+
+@pytest.fixture
+def load_convergence_fail():
+  with open(f'{os.path.dirname(os.path.realpath(__file__))}/test-convergence-failure.pkl', 'rb') as f:
+    x = pickle.load(f)
+  return x
+
+def test_nmf_convergence_fail(load_convergence_fail):
+  x = load_convergence_fail
+  res = nmf(x, 3)
+
+@pytest.mark.xfail
+def test_pois_lra_convergence_fail(load_convergence_fail):
+  x = load_convergence_fail
   res = wlra.pois_lra(x, 3)
