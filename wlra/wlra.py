@@ -36,7 +36,7 @@ def lra(x, rank):
     vt = vt[:rank]
   return np.einsum('ij,j,jk->ik', u, d, vt)
 
-def wlra(x, w, rank, max_iters=1000, atol=1e-9, verbose=False):
+def wlra(x, w, rank, max_iters=10000, atol=1e-9, verbose=False):
   """Return the weighted low rank approximation of x
 
   Minimize the weighted Frobenius norm between x and the approximation z using

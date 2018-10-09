@@ -3,16 +3,8 @@ import pytest
 import scipy.stats as st
 import sklearn.decomposition as skd
 
+from fixtures import simulate
 from wlra.nmf import nmf
-
-@pytest.fixture
-def simulate():
-  np.random.seed(0)
-  l = np.random.normal(size=(100, 1))
-  f = np.random.normal(size=(1, 200))
-  eta = l.dot(f)
-  x = np.random.poisson(lam=np.exp(eta))
-  return x, eta
 
 def test_nmf_shape(simulate):
   x, eta = simulate

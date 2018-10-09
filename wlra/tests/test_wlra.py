@@ -2,10 +2,14 @@ import numpy as np
 import os
 import pickle
 import pytest
+import scipy.stats as st
 import wlra
 
+from fixtures import *
+
 # This is needed to get functions not publicly exported
-from wlra.wlra import lra, nmf
+from wlra.wlra import lra
+from wlra.nmf import nmf
 
 def test_lra_shape():
   x = np.zeros((100, 200))
@@ -42,44 +46,29 @@ def test_wlra_rank_2():
   res0 = lra(x, rank=2)
   assert np.isclose(res, res0).all()
 
-def test_pois_lra_shape():
+def test_plra_shape():
   x = np.ones((100, 200))
-  res = wlra.pois_lra(x, 1)
+  res = wlra.plra(x, 1)
   assert res.shape == (100, 200)
 
-def test_pois_lra_assume_rank_1():
+def test_plra_assume_rank_1():
   x = np.random.poisson(lam=np.exp(np.random.normal(size=(100, 200))))
-  res = wlra.pois_lra(x, 1)
+  res = wlra.plra(x, 1)
 
-def test_pois_lra_masked_array():
-  np.random.seed(0)
-  x = np.random.poisson(lam=np.exp(np.random.normal(size=(100, 200))))
-  x = np.ma.masked_equal(x, 1)
-  res = wlra.pois_lra(x, 1)
-  assert res.shape == (100, 200)
-  assert not np.ma.is_masked(res)
-
-def test_pois_lra_mask():
-  np.random.seed(0)
-  l = np.random.normal(size=(200, 3))
-  f = np.random.normal(size=(3, 300))
-  eta = l.dot(f)
-  x = np.random.poisson(lam=np.exp(eta))
+def test_plra_oracle(simulate):
+  x, eta = simulate
+  l1 = st.poisson(mu=np.exp(wlra.plra(x, rank=3, max_outer_iters=100, check_converged=True))).logpmf(x).sum()
+  l0 = st.poisson(mu=np.exp(eta)).logpmf(x).sum()
+  assert l1 > l0
+  
+def test_plra1_oracle(simulate):
+  x, eta = simulate
+  l1 = st.poisson(mu=np.exp(wlra.plra(x, rank=3, max_outer_iters=1))).logpmf(x).sum()
+  l0 = st.poisson(mu=np.exp(eta)).logpmf(x).sum()
+  assert l1 > l0
+  
+def test_plra_mask(simulate):
+  x, eta = simulate
   mask = np.random.uniform(size=x.shape) < 0.25
   x = np.ma.masked_array(x, mask=mask)
-  res = wlra.pois_lra(x, 3)
-
-@pytest.fixture
-def load_convergence_fail():
-  with open(f'{os.path.dirname(os.path.realpath(__file__))}/test-convergence-failure.pkl', 'rb') as f:
-    x = pickle.load(f)
-  return x
-
-def test_nmf_convergence_fail(load_convergence_fail):
-  x = load_convergence_fail
-  res = nmf(x, 3)
-
-@pytest.mark.xfail
-def test_pois_lra_convergence_fail(load_convergence_fail):
-  x = load_convergence_fail
-  res = wlra.pois_lra(x, 3)
+  res = wlra.plra(x, 3)

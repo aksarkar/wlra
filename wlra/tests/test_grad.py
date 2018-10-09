@@ -3,17 +3,9 @@ import scipy.stats as st
 import scipy.special as sp
 import pytest
 
+from fixtures import *
 from test_nmf import simulate
-from wlra.pois import PoissonFA
-
-@pytest.fixture
-def simulate_lam_low_rank():
-  np.random.seed(0)
-  l = np.exp(np.random.normal(size=(100, 1)))
-  f = np.exp(np.random.normal(size=(1, 200)))
-  lam = l.dot(f)
-  x = np.random.poisson(lam=lam)
-  return x, lam
+from wlra.grad import PoissonFA
 
 def test_PoissonFA(simulate):
   x, eta = simulate
@@ -52,7 +44,6 @@ def test_PoissonFA_res_true_rank(simulate):
   x, eta = simulate
   n, p = x.shape
   rank = (~np.isclose(np.linalg.svd(np.exp(eta), compute_uv=False, full_matrices=False), 0)).sum()
-  assert rank < min(n, p)
 
   m0 = PoissonFA(n_samples=n, n_features=p, n_components=rank, log_link=False).fit(x)
   lam0 = m0.L.dot(m0.F)
