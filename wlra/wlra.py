@@ -36,7 +36,7 @@ def lra(x, rank):
     vt = vt[:rank]
   return np.einsum('ij,j,jk->ik', u, d, vt)
 
-def wlra(x, w, rank, max_iters=1000, atol=1e-3, verbose=False):
+def wlra(x, w, rank, max_iters=1000, atol=1e-9, verbose=False):
   """Return the weighted low rank approximation of x
 
   Minimize the weighted Frobenius norm between x and the approximation z using
@@ -99,7 +99,7 @@ def pois_llik(y, eta):
   """
   return y * eta - safe_exp(eta) - sp.gammaln(y + 1)
 
-def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=False):
+def plra(x, rank, max_outer_iters=1, check_converged=False, max_iters=1000, atol=1e-3, verbose=False):
   """Return the low rank approximation of x assuming Poisson data
 
   Assume x_ij ~ Poisson(exp(eta_ij)), eta_ij = L_ik F_kj
@@ -110,6 +110,7 @@ def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=Fal
   :param x: input data (n, p)
   :param rank: rank of the approximation
   :param max_outer_iters: maximum number of calls to WLRA
+  :param check_converged: if True, run to convergence, else stop after max_outer_iters
   :param max_iters: maximum number of EM iterations in WLRA
   :param verbose: print objective function updates
 
@@ -117,7 +118,7 @@ def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=Fal
 
   """
   n, p = x.shape
-  eta = safe_log(nmf(x, rank))
+  eta = np.where(x > 0, safe_log(x), -np.log(2))
   obj = pois_llik(x, eta).mean()
   if verbose:
     print(f'pois_lra [0]: {obj}')
@@ -132,7 +133,7 @@ def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=Fal
       # computationally convenient, because the WLRA EM update will ignore the
       # value for weight zero.
       target = target.filled(0)
-    eta1 = wlra(target, w, rank, max_iters=max_iters, atol=atol, verbose=verbose)
+    eta1 = wlra(target, w, rank, max_iters=max_iters, verbose=verbose)
     update = pois_llik(x, eta1).mean()
     if verbose:
       print(f'pois_lra [{i + 1}]: {update}')
@@ -141,4 +142,7 @@ def pois_lra(x, rank, max_outer_iters=50, max_iters=1000, atol=1e-3, verbose=Fal
     else:
       eta = eta1
       obj = update
-  raise RuntimeError('failed to converge')
+  if check_converged:
+    raise RuntimeError('failed to converge')
+  else:
+    return eta

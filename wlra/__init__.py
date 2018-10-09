@@ -1,1 +1,1 @@
-from .wlra import lra, wlra, pois_lra
+from .wlra import lra, wlra, plra
