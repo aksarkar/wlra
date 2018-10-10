@@ -36,7 +36,7 @@ def lra(x, rank):
     vt = vt[:rank]
   return np.einsum('ij,j,jk->ik', u, d, vt)
 
-def wlra(x, w, rank, max_iters=10000, atol=1e-9, verbose=False):
+def wlra(x, w, rank, max_iters=10000, atol=1e-3, verbose=False):
   """Return the weighted low rank approximation of x
 
   Minimize the weighted Frobenius norm between x and the approximation z using
@@ -68,12 +68,12 @@ def wlra(x, w, rank, max_iters=10000, atol=1e-9, verbose=False):
   # For now, take the simpler strategy of just initializing to zero. Srebro and
   # Jaakkola suggest this can underfit.
   z = np.zeros(x.shape)
-  obj = (w * np.square(x)).mean()
+  obj = (w * np.square(x)).sum()
   if verbose:
     print(f'wsvd [0] = {obj}')
   for i in range(max_iters):
     z1 = lra(w * x + (1 - w) * z, rank)
-    update = (w * np.square(x - z1)).mean()
+    update = (w * np.square(x - z1)).sum()
     if verbose:
       print(f'wsvd [{i + 1}] = {update}')
     if update > obj:
@@ -119,7 +119,7 @@ def plra(x, rank, max_outer_iters=1, check_converged=False, max_iters=1000, atol
   """
   n, p = x.shape
   eta = np.where(x > 0, safe_log(x), -np.log(2))
-  obj = pois_llik(x, eta).mean()
+  obj = pois_llik(x, eta).sum()
   if verbose:
     print(f'pois_lra [0]: {obj}')
   for i in range(max_outer_iters):
@@ -134,7 +134,7 @@ def plra(x, rank, max_outer_iters=1, check_converged=False, max_iters=1000, atol
       # value for weight zero.
       target = target.filled(0)
     eta1 = wlra(target, w, rank, max_iters=max_iters, verbose=verbose)
-    update = pois_llik(x, eta1).mean()
+    update = pois_llik(x, eta1).sum()
     if verbose:
       print(f'pois_lra [{i + 1}]: {update}')
     if np.isclose(update, obj, atol=atol):
