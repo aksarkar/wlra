@@ -46,6 +46,11 @@ def test_wlra_rank_2():
   res0 = lra(x, rank=2)
   assert np.isclose(res, res0).all()
 
+def test_wlra_missing(simulate):
+  x, eta = simulate
+  w = (np.random.uniform(size=x.shape) < 0.1).astype(float)
+  wlra.wlra(x, w, rank=3)
+
 def test_plra_shape():
   x = np.ones((100, 200))
   res = wlra.plra(x, 1)

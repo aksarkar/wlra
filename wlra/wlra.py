@@ -54,7 +54,6 @@ def wlra(x, w, rank, max_iters=10000, atol=1e-3, verbose=False):
   :returns low_rank: - ndarray (n, p)
 
   """
-  n, p = x.shape
   # Important: WLRA requires weights 0 <= w <= 1
   w = np.array(w, dtype='float')
   w /= w.max()
