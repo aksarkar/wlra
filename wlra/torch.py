@@ -21,7 +21,7 @@ def get_proj(x, rank, num_iters=4):
     return torch.qr(torch.mm(x, proj))[0]
 
 @torch.no_grad()
-def lra(x, rank, num_oversamples=10):
+def lra(x, rank, num_oversamples=10, to_numpy=True):
   if not torch.cuda.is_available():
     raise RuntimeError('cuda is not available')
   with torch.cuda.device(0):
@@ -38,7 +38,10 @@ def lra(x, rank, num_oversamples=10):
                    v[:,:rank].transpose(0, 1))
     if transpose:
       res = res.transpose(0, 1)
-    return res
+    if to_numpy:
+      return res.numpy()
+    else:
+      return res
 
 @torch.no_grad()
 def wlra(x, w, rank, max_iters=10000, atol=1e-3, verbose=False):
@@ -53,14 +56,14 @@ def wlra(x, w, rank, max_iters=10000, atol=1e-3, verbose=False):
     if verbose:
       print(f'torch_wlra [0] = {obj}')
     for i in range(max_iters):
-      z1 = lra(w * x + (1 - w) * z, rank=rank)
+      z1 = lra(w * x + (1 - w) * z, rank=rank, to_numpy=False)
       update = torch.sum(w * torch.pow(x - z1, 2))
       if verbose:
         print(f'torch_wlra [{i + 1}] = {update}')
       if update > obj:
         raise RuntimeError('objective increased')
       elif abs(update - obj) < atol:
-        return z1
+        return z1.numpy()
       else:
         z = z1
         obj = update
