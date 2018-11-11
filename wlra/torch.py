@@ -1,11 +1,29 @@
 """Weighted low rank approximation on the GPU
 
 """
+import numpy as np
 import torch
 import torch.cuda
 
-from .safe import *
-from .wlra import pois_llik
+def safe_log(x):
+  return torch.log(x + 1e-8)
+
+def safe_exp(x):
+  return torch.where(x > 100, x, torch.exp(x))
+
+def pois_llik(y, eta):
+  """Return ln p(y | eta) assuming y ~ Poisson(exp(eta))
+
+  This implementation supports broadcasting eta (i.e., sharing parameters
+  across observations).
+
+  :param y: tensor
+  :param eta: tensor
+
+  :returns llik: tensor (y.shape)
+
+  """
+  return y * eta - safe_exp(eta) - torch.lgamma(y + 1)
 
 @torch.no_grad()
 def get_proj(x, rank, num_iters=4):
@@ -87,7 +105,8 @@ def plra(x, rank, **kwargs):
   """
   if not torch.cuda.is_available():
     raise RuntimeError('cuda is not available')
-  eta = np.where(x > 0, safe_log(x), -np.log(2))
+  x = torch.tensor(x, dtype=torch.float)
+  eta = torch.where(x > 0, safe_log(x), -torch.tensor([-np.log(2)]))
   obj = pois_llik(x, eta).sum()
   lam = safe_exp(eta)
   w = lam
