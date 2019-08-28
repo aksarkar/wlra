@@ -60,22 +60,27 @@ def wlra(x, w, rank, max_iters=10000, atol=1e-3, verbose=False):
   # Important: the procedure is deterministic, so initialization
   # matters.
   #
-  # Srebro and Jaakkola suggest the best strategy is to initialize
-  # from zero, but go from a full rank down to a rank k approximation in
-  # the first iterations
-  #
-  # For now, take the simpler strategy of just initializing to zero. Srebro and
-  # Jaakkola suggest this can underfit.
+  # Srebro and Jaakkola suggest the best strategy is to initialize from zero,
+  # but go from a full rank down to a rank k approximation in the first
+  # iterations. Compromise and start from a rank 3 * k approximation
+  target = rank
+  init_rank = 3 * rank
+  rank = init_rank
   z = np.zeros(x.shape)
   obj = (w * np.square(x)).sum()
   if verbose:
     print(f'wsvd [0] = {obj}')
   for i in range(max_iters):
     z1 = lra(w * x + (1 - w) * z, rank)
+    if rank > target:
+      rank -= 1
     update = (w * np.square(x - z1)).sum()
     if verbose:
       print(f'wsvd [{i + 1}] = {update}')
-    if update > obj:
+    if i > init_rank - target and update > obj:
+      # The objective could increase as the rank of the approximation goes
+      # down. Once we hit the target rank, we should have monotone convergence
+      # by EM
       raise RuntimeError('objective increased')
     elif np.isclose(update, obj, atol=atol):
       return z1
@@ -98,7 +103,7 @@ def pois_llik(y, eta):
   """
   return y * eta - safe_exp(eta) - sp.gammaln(y + 1)
 
-def plra(x, rank, max_outer_iters=1, check_converged=False, max_iters=1000, atol=1e-3, verbose=False):
+def plra(x, rank, eta0=None, max_outer_iters=1, check_converged=False, max_iters=1000, atol=1e-3, verbose=False):
   """Return the low rank approximation of x assuming Poisson data
 
   Assume x_ij ~ Poisson(exp(eta_ij)), eta_ij = L_ik F_kj
@@ -117,7 +122,9 @@ def plra(x, rank, max_outer_iters=1, check_converged=False, max_iters=1000, atol
 
   """
   n, p = x.shape
-  eta = np.where(x > 0, safe_log(x), -np.log(2))
+  if eta0 is None:
+    eta0 = np.log(.1)
+  eta = np.where(x > 0, safe_log(x), eta0)
   obj = pois_llik(x, eta).sum()
   if verbose:
     print(f'pois_lra [0]: {obj}')

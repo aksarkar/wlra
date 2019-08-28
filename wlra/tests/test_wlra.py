@@ -77,3 +77,9 @@ def test_plra_mask(simulate):
   mask = np.random.uniform(size=x.shape) < 0.25
   x = np.ma.masked_array(x, mask=mask)
   res = wlra.plra(x, 3)
+
+@pytest.mark.skip('dummy test')
+def test_plra1_10x():
+  import scmodes
+  x = scmodes.dataset.read_10x(f'/project2/mstephens/aksarkar/projects/singlecell-ideas/data/10xgenomics/b_cells/filtered_matrices_mex/hg19/', return_df=True)
+  res = wlra.plra(x.values, rank=10, verbose=True)
