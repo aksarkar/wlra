@@ -36,3 +36,9 @@ def test_nmf_mask(simulate):
 def test_nmf_not_frob(simulate):
   x, eta = simulate
   res = nmf(x, 1, frob=False)
+
+def test_nmf_return_lf(simulate):
+  x, eta = simulate
+  l, f = nmf(x, 1, return_lf=True)
+  assert l.shape == (x.shape[0], 1)
+  assert f.shape == (1, x.shape[1])

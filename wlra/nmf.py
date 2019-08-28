@@ -23,7 +23,7 @@ def i_loss(x, lf):
   """
   return (x * safe_log(x) - x * safe_log(lf) - x + lf).mean()
 
-def nmf(x, rank, frob=True, max_iters=1000, atol=1e-4, verbose=False):
+def nmf(x, rank, frob=True, max_iters=1000, atol=1e-4, verbose=False, return_lf=False):
   """Non-negative matrix factorization (Lee and Seung 2001).
 
   This implementation supports masked arrays.
@@ -59,7 +59,10 @@ def nmf(x, rank, frob=True, max_iters=1000, atol=1e-4, verbose=False):
     if update > obj and not np.isclose(update, obj, atol=atol):
       raise RuntimeError('objective function increased')
     elif np.isclose(update, obj, atol=atol):
-      return res
+      if return_lf:
+        return l, f
+      else:
+        return res
     else:
       obj = update
   raise RuntimeError('failed to converge')
