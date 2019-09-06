@@ -3,7 +3,12 @@ import scipy.special as sp
 import torch
 
 class PoissonFA(torch.nn.Module):
-  """Poisson factor analysis via first order optimization"""
+  """Poisson factor analysis via first order optimization
+
+  x ~ Poisson(lambda_ij)
+  h(lambda_ij) = (LF')_ij
+
+  """
   def __init__(self, n_samples, n_features, n_components, log_link=True):
     """Initialize the loadings and factors. 
 
@@ -12,7 +17,7 @@ class PoissonFA(torch.nn.Module):
     :param n_samples: number of input samples
     :param n_features: number of input features
     :param n_components: rank of the factorization
-    :param log_link: parameterize x_ij ~ Pois(exp(L_ik F_kj))
+    :param log_link: parameterize h = ln
     """
     super().__init__()
     self.log_link = log_link
@@ -20,16 +25,12 @@ class PoissonFA(torch.nn.Module):
     self.f = torch.randn([n_components, n_features], requires_grad=True)
 
   def forward(self, x):
-    """Return the log likelihood of x assuming x_ij ~ Pois(exp(l_ik f_kj))
-
-    Drop the constant (x_ij)! to simplify.
-
-    """
+    """Return the negative log likelihood of x"""
     if self.log_link:
       lam = torch.exp(torch.matmul(self.l, self.f))
     else:
       lam = torch.matmul(torch.exp(self.l), torch.exp(self.f))
-    return -torch.sum(x * torch.log(lam) - lam)
+    return -torch.sum(x * torch.log(lam) - lam - torch.lgamma(x + 1))
 
   def fit(self, x, max_epochs=1000, atol=1, verbose=False, **kwargs):
     """Fit the model and return self.
