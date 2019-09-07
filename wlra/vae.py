@@ -71,20 +71,27 @@ class PVAE(torch.nn.Module):
     if torch.cuda.is_available():
       # Move the model and data to the GPU
       self.cuda()
-      x.cuda()
-      s.cuda()
+      x = x.cuda()
+      s = s.cuda()
     stoch_samples = torch.Size([stoch_samples])
-    opt = torch.optim.Adam(self.parameters(), **kwargs)
+    opt = torch.optim.RMSprop(self.parameters(), **kwargs)
     for epoch in range(max_epochs):
       opt.zero_grad()
       loss = self.loss(x, s, stoch_samples)
+      if torch.isnan(loss):
+        return self
       loss.backward()
       opt.step()
-      if verbose and not i % 10:
-        print(f'[epoch={epoch} batch={i}] elbo={-loss}')
+      if verbose and not epoch % 10:
+        print(f'[epoch={epoch}] elbo={-loss}')
     return self
 
   @torch.no_grad()
   def denoise(self, x):
+    if torch.cuda.is_available():
+      x = x.cuda()
     # Plug E[z | x] into the decoder
-    return self.decoder.forward(self.encoder.forward(x)[0]).numpy()
+    lam = self.decoder.forward(self.encoder.forward(x)[0])
+    if torch.cuda.is_available():
+      lam = lam.cpu()
+    return lam.numpy()

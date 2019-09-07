@@ -30,14 +30,14 @@ def test_decoder(dims):
   lam = dec.forward(x)
   assert lam.shape == (n, p)
 
-def _fit_pvae(x, max_epochs=100):
+def _fit_pvae(x, lr=1e-2, max_epochs=100, stoch_samples=10, verbose=False):
   n, p = x.shape
   s = x.sum(axis=1, keepdims=True)
   assert s.shape == (n, 1)
   latent_dim = 10
   x = torch.tensor(x, dtype=torch.float)
   s = torch.tensor(s, dtype=torch.float)
-  model = wlra.vae.PVAE(p, latent_dim).fit(x, s, lr=1e-2, verbose=False, max_epochs=max_epochs)
+  model = wlra.vae.PVAE(p, latent_dim).fit(x, s, lr=lr, stoch_samples=stoch_samples, max_epochs=max_epochs, verbose=verbose)
   return model, x
   
 def test_pvae(simulate):
@@ -53,7 +53,7 @@ def test_pvae_denoise(simulate):
 def test_pvae_oracle(simulate):
   x, eta = simulate
   l0 = st.poisson(mu=np.exp(eta)).logpmf(x).mean()
-  model, xt = _fit_pvae(x, max_epochs=1000)
+  model, xt = _fit_pvae(x, lr=1e-2, max_epochs=1000)
   lam = model.denoise(xt)
   l1 = st.poisson(mu=lam).logpmf(x).mean()
   assert l1 > l0
